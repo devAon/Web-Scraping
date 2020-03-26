@@ -3,8 +3,14 @@ from selenium.webdriver.common.by import By
 
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+
+from bs4 import BeautifulSoup as bs
+
 import time
 from Tour import TourInfo
+
+from DbMgr import DBHelper as Db
+db = Db()
 
 main_url = 'http://tour.interpark.com/' 
 keyword  = '스위스'
@@ -66,6 +72,28 @@ for tour in tour_list:
         detail_url = link[1:-1]
         driver.get( detail_url )
         time.sleep(1)
+        soup = bs (driver.page_source, 'html.parser')
+        data = soup.select('.tip-cover')
+        print( type(data), len(data), type(data[0].contents)  )
+
+        content_final = ''
+        for c in data[0].contents:
+            content_final += str(c)
+        
+        import re
+        content_final   = re.sub("'", '"', content_final)
+        content_final   = re.sub(re.compile(r'\r\n|\r|\n|\n\r+'), '', content_final)
+
+        print( content_final )
+
+        db.db_insertCrawlingData(
+            tour.title,
+            tour.price[:-1],
+            tour.area.replace('출발 가능 기간 : ',''),
+            content_final,
+            keyword
+        )
+
 
 #종료
 driver.close()
